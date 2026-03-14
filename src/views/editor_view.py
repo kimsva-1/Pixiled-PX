@@ -1,5 +1,4 @@
 import flet as ft
-from flet_color_pickers import ColorPicker, PaletteType, ColorLabelType
 
 PIXEL_SIZE = 15
 
@@ -12,15 +11,6 @@ class EditorView:
         self.model = model
         self.pixel_controls = []
         self.mouse_down = False
-
-        self.current_color_preview = None
-
-    def on_color_change(self, e):
-        color = e.data
-        self.controller.set_color(color)
-
-        self.current_color_preview.bgcolor = color
-        self.current_color_preview.update()
 
     def color_button(self, color):
         return ft.Container(
@@ -60,11 +50,14 @@ class EditorView:
 
         grid = ft.Column(grid_rows, spacing=0)
 
-        canvas = ft.GestureDetector(
-            content=grid,
-            on_pan_start=self.on_mouse_down,
-            on_pan_end=self.on_mouse_up
-        )
+        palette = ft.Row([
+            self.color_button("#000000"),
+            self.color_button("#FF0000"),
+            self.color_button("#00FF00"),
+            self.color_button("#0000FF"),
+            self.color_button("#FFFF00"),
+            self.color_button("#FFFFFF"),
+        ])
 
         tools = ft.Row([
             ft.ElevatedButton(
@@ -77,40 +70,16 @@ class EditorView:
             ),
         ])
 
-        self.current_color_preview = ft.Container(
-            width=40,
-            height=40,
-            bgcolor="#000000",
-            border=ft.border.all(2, "#FFFFFF")
-        )
-
-        picker = ColorPicker(
-            color="#000000",
-            color_history=[
-                "#000000",
-                "#FF0000",
-                "#00FF00",
-                "#0000FF",
-                "#FFFF00",
-                "#FFFFFF",
-            ],
-            on_color_change=self.on_color_change,
-            palette_type=PaletteType.RGB_WITH_GREEN,
-            label_types=[
-                ColorLabelType.HEX,
-                ColorLabelType.RGB,
-            ],
-            picker_area_border_radius=ft.BorderRadius.all(12),
+        canvas = ft.GestureDetector(
+            content=grid,
+            on_pan_start=self.on_mouse_down,
+            on_pan_end=self.on_mouse_up
         )
 
         self.page.add(
             ft.Column([
                 tools,
-                ft.Row([
-                    ft.Text("Current color:"),
-                    self.current_color_preview
-                ]),
-                picker,
+                palette,
                 canvas
             ])
         )
@@ -137,4 +106,4 @@ class EditorView:
         color = self.model.get_pixel(row, col)
 
         e.control.bgcolor = color
-        e.control.update()
+        e.control.update()   # дуже швидко
