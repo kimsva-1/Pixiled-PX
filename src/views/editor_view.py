@@ -11,6 +11,7 @@ class EditorView:
         self.model = model
         self.pixel_controls = []
         self.mouse_down = False
+        self.last_pixel = None
 
     def color_button(self, color):
         return ft.Container(
@@ -60,14 +61,10 @@ class EditorView:
         ])
 
         tools = ft.Row([
-            ft.ElevatedButton(
-                "✏ Pencil",
-                on_click=lambda e: self.controller.set_tool("pencil")
-            ),
-            ft.ElevatedButton(
-                "🧽 Eraser",
-                on_click=lambda e: self.controller.set_tool("eraser")
-            ),
+            ft.ElevatedButton("✏ Pencil",
+                            on_click=lambda e: self.controller.set_tool("pencil")),
+            ft.ElevatedButton("🧽 Eraser",
+                            on_click=lambda e: self.controller.set_tool("eraser")),
         ])
 
         canvas = ft.GestureDetector(
@@ -86,16 +83,25 @@ class EditorView:
 
     def on_mouse_down(self, e):
         self.mouse_down = True
+        self.last_pixel = None
 
     def on_mouse_up(self, e):
         self.mouse_down = False
+        self.last_pixel = None
 
     def on_pixel_click(self, e):
         self.paint_pixel(e)
 
     def on_pixel_hover(self, e):
-        if self.mouse_down:
-            self.paint_pixel(e)
+
+        if not self.mouse_down:
+            return
+
+        if self.last_pixel == e.control:
+            return
+
+        self.last_pixel = e.control
+        self.paint_pixel(e)
 
     def paint_pixel(self, e):
 
@@ -106,4 +112,4 @@ class EditorView:
         color = self.model.get_pixel(row, col)
 
         e.control.bgcolor = color
-        e.control.update()   # дуже швидко
+        e.control.update()
