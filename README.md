@@ -1,69 +1,24 @@
-# PixiledPx app
+# Pixiled PX 
 
-## Run the app
+Редактор піксельної графіки, розроблений на мові Python з використанням бібліотеки **PyQt6**.
 
-### uv
+## Основні можливості
 
-Run as a desktop app:
+* Малювання в реальному часі без затримок (завдяки QPainter).
+* Інструменти: Олівець, Гумка, Очищення полотна.
+* Палітра швидкого вибору кольорів.
 
-```bash
-uv run flet run
-```
 
-Run as a web app:
+## Технологічний стек
 
-```bash
-uv run flet run --web
-```
+* **Мова:** Python 3.12.6
+* **Графічний фреймворк:** PyQt6
+* **Архітектура:** MVC (Model-View-Controller)
 
-For more details on running the app, refer to the [Getting Started Guide](https://docs.flet.dev/).
+## Встановлення та запуск
 
-## Build the app
-
-### Android
-
-```bash
-flet build apk -v
-```
-
-For more details on building and signing `.apk` or `.aab`, refer to the [Android Packaging Guide](https://docs.flet.dev/publish/android/).
-
-### iOS
-
-```bash
-flet build ipa -v
-```
-
-For more details on building and signing `.ipa`, refer to the [iOS Packaging Guide](https://docs.flet.dev/publish/ios/).
-
-### macOS
-
-```bash
-flet build macos -v
-```
-
-For more details on building macOS package, refer to the [macOS Packaging Guide](https://docs.flet.dev/publish/macos/).
-
-### Linux
-
-```bash
-flet build linux -v
-```
-
-For more details on building Linux package, refer to the [Linux Packaging Guide](https://docs.flet.dev/publish/linux/).
-
-### Windows
-
-```bash
-flet build windows -v
-```
-
-For more details on building Windows package, refer to the [Windows Packaging Guide](https://docs.flet.dev/publish/windows/).
-
-### Web
-
-```bash
-flet build web -v
-```
-
-For more details on building Web app, refer to the [Web Packaging Guide](https://docs.flet.dev/publish/web/).
+1. Створіть віртуальне середовище:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # для Linux/macOS
+   .venv\Scripts\activate     # для Windows

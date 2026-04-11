@@ -1,115 +1,95 @@
-import flet as ft
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+from PyQt6.QtGui import QPainter, QColor, QPen
+from PyQt6.QtCore import Qt
 
-PIXEL_SIZE = 15
+PIXEL_SIZE = 25  # Розмір пікселя на екрані
 
-
-class EditorView:
-
-    def __init__(self, page, controller, model):
-        self.page = page
+class PixelCanvas(QWidget):
+    def __init__(self, controller, model):
+        super().__init__()
         self.controller = controller
         self.model = model
-        self.pixel_controls = []
-        self.mouse_down = False
-        self.last_pixel = None
+        # Встановлюємо жорсткий розмір віджета залежно від моделі
+        self.setFixedSize(self.model.width * PIXEL_SIZE, self.model.height * PIXEL_SIZE)
 
-    def color_button(self, color):
-        return ft.Container(
-            width=30,
-            height=30,
-            bgcolor=color,
-            border=ft.border.all(1, "#000000"),
-            on_click=lambda e: self.controller.set_color(color)
-        )
-
-    def build(self):
-
-        grid_rows = []
-
+    def paintEvent(self, event):
+        """Метод перемальовування всього полотна"""
+        painter = QPainter(self)
         for r in range(self.model.height):
-
-            row_controls = []
-            row_ui = []
-
             for c in range(self.model.width):
+                # Отримуємо колір з моделі
+                color_hex = self.model.get_pixel(r, c)
+                painter.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, QColor(color_hex))
+                
+                # Малюємо сітку
+                painter.setPen(QPen(QColor("#E0E0E0"), 1))
+                painter.drawRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE)
 
-                pixel = ft.Container(
-                    width=PIXEL_SIZE,
-                    height=PIXEL_SIZE,
-                    bgcolor=self.model.get_pixel(r, c),
-                    border=ft.border.all(0.5, "#CCCCCC"),
-                    data=(r, c),
-                    on_click=self.on_pixel_click,
-                    on_hover=self.on_pixel_hover
-                )
+    def mousePressEvent(self, event):
+        self.process_mouse(event)
 
-                row_controls.append(pixel)
-                row_ui.append(pixel)
+    def mouseMoveEvent(self, event):
+        self.process_mouse(event)
 
-            self.pixel_controls.append(row_controls)
-            grid_rows.append(ft.Row(row_ui, spacing=0))
+    def process_mouse(self, event):
+        # Вираховуємо координати кліку в індекси масиву
+        col = int(event.position().x() // PIXEL_SIZE)
+        row = int(event.position().y() // PIXEL_SIZE)
+        
+        if 0 <= row < self.model.height and 0 <= col < self.model.width:
+            self.controller.paint_pixel(row, col)
+            self.update() # Запит на перемальовування (викличе paintEvent)
 
-        grid = ft.Column(grid_rows, spacing=0)
+class EditorView(QMainWindow):
+    def __init__(self, controller, model):
+        super().__init__()
+        self.controller = controller
+        self.model = model
+        self.setWindowTitle("Pixiled PX - PyQt Edition")
 
-        palette = ft.Row([
-            self.color_button("#000000"),
-            self.color_button("#FF0000"),
-            self.color_button("#00FF00"),
-            self.color_button("#0000FF"),
-            self.color_button("#FFFF00"),
-            self.color_button("#FFFFFF"),
-        ])
+        # Головний віджет
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        main_layout = QVBoxLayout(main_widget)
 
-        tools = ft.Row([
-            ft.ElevatedButton("✏ Pencil",
-                            on_click=lambda e: self.controller.set_tool("pencil")),
-            ft.ElevatedButton("🧽 Eraser",
-                            on_click=lambda e: self.controller.set_tool("eraser")),
-        ])
+        # 1. Панель інструментів (Pencil, Eraser, Clear)
+        tools_layout = QHBoxLayout()
+        btn_pencil = QPushButton("✏ Pencil")
+        btn_eraser = QPushButton("🧽 Eraser")
+        btn_clear = QPushButton("🗑 Clear")
 
-        canvas = ft.GestureDetector(
-            content=grid,
-            on_pan_start=self.on_mouse_down,
-            on_pan_end=self.on_mouse_up
-        )
+        btn_pencil.clicked.connect(lambda: self.controller.set_tool("pencil"))
+        btn_eraser.clicked.connect(lambda: self.controller.set_tool("eraser"))
+        btn_clear.clicked.connect(self.on_clear_click)
 
-        self.page.add(
-            ft.Column([
-                tools,
-                palette,
-                canvas
-            ])
-        )
+        tools_layout.addWidget(btn_pencil)
+        tools_layout.addWidget(btn_eraser)
+        tools_layout.addWidget(btn_clear)
+        main_layout.addLayout(tools_layout)
 
-    def on_mouse_down(self, e):
-        self.mouse_down = True
-        self.last_pixel = None
+        # 2. Палітра кольорів
+        palette_layout = QHBoxLayout()
+        colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FFFFFF"]
+        
+        for hex_color in colors:
+            btn = QPushButton()
+            btn.setFixedSize(35, 35)
+            btn.setStyleSheet(f"background-color: {hex_color}; border: 1px solid #333; border-radius: 5px;")
+            # Використовуємо замикання c=hex_color, щоб зберегти значення кольору
+            btn.clicked.connect(lambda checked, c=hex_color: self.controller.set_color(c))
+            palette_layout.addWidget(btn)
+        
+        palette_layout.addStretch() # Відсуваємо палітру вліво
+        main_layout.addLayout(palette_layout)
 
-    def on_mouse_up(self, e):
-        self.mouse_down = False
-        self.last_pixel = None
+        # 3. Полотно (Canvas)
+        self.canvas = PixelCanvas(controller, model)
+        main_layout.addWidget(self.canvas, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        # Відступи
+        main_layout.addStretch()
 
-    def on_pixel_click(self, e):
-        self.paint_pixel(e)
-
-    def on_pixel_hover(self, e):
-
-        if not self.mouse_down:
-            return
-
-        if self.last_pixel == e.control:
-            return
-
-        self.last_pixel = e.control
-        self.paint_pixel(e)
-
-    def paint_pixel(self, e):
-
-        row, col = e.control.data
-
-        self.controller.paint_pixel(row, col)
-
-        color = self.model.get_pixel(row, col)
-
-        e.control.bgcolor = color
-        e.control.update()
+    def on_clear_click(self):
+        #Очищення моделі та оновлення екрана
+        self.model.clear()
+        self.canvas.update()
