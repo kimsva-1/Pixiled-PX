@@ -48,7 +48,7 @@ class PixelCanvas(QWidget):
         for r in range(self.model.height):
             for c in range(self.model.width):
                 color = self.model.get_pixel(r, c)
-                painter.fillRect(c * ps, r * ps, ps, ps, QColor(color))
+                painter.fillRect(c * ps, r * ps, ps, ps, QColor(color)) 
                 if ps > 5:
                     painter.setPen(QPen(QColor("#D0D0D0"), 1))
                     painter.drawRect(c * ps, r * ps, ps, ps)
@@ -139,6 +139,7 @@ class EditorView(QMainWindow):
             btn.setToolTip(tip)
             btn.clicked.connect(lambda ch, t=tool_id: self.controller.set_tool(t))
             self.tools_layout.addWidget(btn)
+            
         
         # Кнопка Clear (Повернули)
         btn_clear = QPushButton("🗑")
