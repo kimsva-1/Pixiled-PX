@@ -22,7 +22,7 @@ class EditorController:
             return
             
         width = self.model.width
-        height = self.model.height2
+        height = self.model.height
         
         # 1. Створюємо оригінальне маленьке зображення
         image = QImage(width, height, QImage.Format.Format_ARGB32)

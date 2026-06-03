@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QPushButton, QFileDialog, QDialog, QLabel, 
-                            QSpinBox, QScrollArea, QFrame)
+                            QSpinBox, QScrollArea, QFrame, QColorDialog)
 from PyQt6.QtGui import QPainter, QColor, QPen
 from PyQt6.QtCore import Qt, QPointF, QTimer
 from models.canvas_model import CanvasModel
@@ -85,24 +85,23 @@ class EditorView(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Pixiled PX")
-        self.resize(1100, 850)
+        self.resize(700, 650)
         
         central = QWidget()
         self.setCentralWidget(central)
         
-        # Головний вертикальний лейаут (Палітра зверху, під нею все інше)
         self.root_layout = QVBoxLayout(central)
         
-        # 1. Палітра (Зверху, горизонтально по лівому краю)
+        # 1. Палітра зверху
         self.palette_layout = QHBoxLayout()
         self.palette_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.root_layout.addLayout(self.palette_layout)
         
-        # 2. Основна робоча область (Інструменти зліва, Холст справа)
+        # 2. Робоча область
         self.work_area = QHBoxLayout()
         self.root_layout.addLayout(self.work_area)
         
-        # Панель інструментів (Вертикально)
+        # Панель інструментів (вертикальна)
         self.tools_layout = QVBoxLayout()
         self.tools_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.work_area.addLayout(self.tools_layout)
@@ -115,6 +114,14 @@ class EditorView(QMainWindow):
         
         QTimer.singleShot(100, self.open_new_project_dialog)
 
+    def toggle_on_top(self, checked):
+        """Зміна режиму закріплення вікна поверх інших"""
+        if checked:
+            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        else:
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+        self.show()
+
     def open_new_project_dialog(self):
         dialog = NewCanvasDialog(self)
         if dialog.exec():
@@ -126,22 +133,25 @@ class EditorView(QMainWindow):
         self.controller = EditorController(self.model)
         
         # Очищуємо попередні віджети
-        for layout in [self.tools_layout, self.palette_layout]:
-            while layout.count():
-                item = layout.takeAt(0)
-                if item.widget(): item.widget().deleteLater()
+        while self.tools_layout.count():
+            item = self.tools_layout.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
+            elif item.spacerItem(): self.tools_layout.removeItem(item)
 
-        # --- Інструменти (Вертикально, квадратні) ---
+        while self.palette_layout.count():
+            item = self.palette_layout.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
+
+        # --- Інструменти зверху ---
         tools = [("✏", "pencil", "Кисть"), ("🧽", "eraser", "Ластик")]
         for icon, tool_id, tip in tools:
             btn = QPushButton(icon)
-            btn.setFixedSize(50, 50)  # Робимо квадратними
+            btn.setFixedSize(50, 50)
             btn.setToolTip(tip)
             btn.clicked.connect(lambda ch, t=tool_id: self.controller.set_tool(t))
             self.tools_layout.addWidget(btn)
-            
         
-        # Кнопка Clear (Повернули)
+        # Кнопка Clear
         btn_clear = QPushButton("🗑")
         btn_clear.setFixedSize(50, 50)
         btn_clear.setToolTip("Очистити")
@@ -155,7 +165,22 @@ class EditorView(QMainWindow):
         btn_save.clicked.connect(self.on_save)
         self.tools_layout.addWidget(btn_save)
 
-        # --- Палітра (Горизонтально) ---
+        # Пружина штовхає наступні кнопки в самий низ
+        self.tools_layout.addStretch()
+
+        # --- Кнопка-Checkbox для закріплення вікна (В самому низу) ---
+        self.pin_checkbox = QPushButton("📌")
+        self.pin_checkbox.setFixedSize(20, 20)
+        self.pin_checkbox.setCheckable(True)
+        self.pin_checkbox.setToolTip("Закріпити поверх усіх вікон")
+        self.pin_checkbox.setStyleSheet("""
+            QPushButton { background-color: #f0f0f0; border: 1px solid #999; border-radius: 5px; }
+            QPushButton:checked { background-color: #aaffaa; border: 2px solid #00aa00; }
+        """)
+        self.pin_checkbox.toggled.connect(self.toggle_on_top)
+        self.tools_layout.addWidget(self.pin_checkbox)
+
+        # --- Палітра ---
         colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FFFFFF", "#FF00FF", "#00FFFF"]
         for c in colors:
             btn = QPushButton()
@@ -164,21 +189,39 @@ class EditorView(QMainWindow):
             btn.clicked.connect(lambda ch, col=c: self.controller.set_color(col))
             self.palette_layout.addWidget(btn)
 
+        # --- Кнопка для власного кольору ---
+        self.custom_color_btn = QPushButton("🌈")
+        self.custom_color_btn.setFixedSize(30, 30)
+        self.custom_color_btn.setToolTip("Обрати свій колір")
+        self.custom_color_btn.setStyleSheet("background-color: #e0e0e0; border: 2px dashed #555;")
+        self.custom_color_btn.clicked.connect(self.open_color_picker)
+        self.palette_layout.addWidget(self.custom_color_btn)
+
         self.canvas = PixelCanvas(self.controller, self.model)
         self.scroll.setWidget(self.canvas)
+
+    def open_color_picker(self):
+        # Відкриваємо стандартне вікно вибору кольору PyQt
+        color = QColorDialog.getColor()
+        
+        # Якщо користувач вибрав колір і натиснув "ОК" (а не "Скасувати")
+        if color.isValid():
+            hex_color = color.name() # Перетворюємо колір у формат "#RRGGBB"
+            self.controller.set_color(hex_color)
+            
+            # Візуально змінюємо фон кнопки на обраний колір, щоб було видно, що зараз активно
+            self.custom_color_btn.setStyleSheet(f"background-color: {hex_color}; border: 2px solid #fff;")
 
     def on_clear(self):
         self.model.clear()
         self.canvas.update()
 
     def on_save(self):
-        # Додано вибір PNG або JPG
         path, selected_filter = QFileDialog.getSaveFileName(
             self, "Зберегти малюнок", "", 
             "PNG Image (*.png);;JPEG Image (*.jpg)"
         )
         if path:
-            # Якщо користувач забув дописати розширення, додаємо його з фільтра
             if not path.endswith(('.png', '.jpg', '.jpeg')):
                 ext = ".png" if "PNG" in selected_filter else ".jpg"
                 path += ext
