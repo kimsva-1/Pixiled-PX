@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QPushButton, QFileDialog, QDialog, QLabel, 
-                            QSpinBox, QScrollArea, QFrame, QColorDialog)
+                            QSpinBox, QScrollArea, QFrame, QColorDialog, QSlider)
 from PyQt6.QtGui import QPainter, QColor, QPen
 from PyQt6.QtCore import Qt, QPointF, QTimer
 from models.canvas_model import CanvasModel
@@ -122,6 +122,11 @@ class EditorView(QMainWindow):
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
         self.show()
 
+    def change_opacity(self, value):
+        """Метод зміни прозорості всього вікна (value йде від 20 до 100)"""
+        opacity = value / 100.0
+        self.setWindowOpacity(opacity)
+
     def open_new_project_dialog(self):
         dialog = NewCanvasDialog(self)
         if dialog.exec():
@@ -168,7 +173,21 @@ class EditorView(QMainWindow):
         # Пружина штовхає наступні кнопки в самий низ
         self.tools_layout.addStretch()
 
-        # --- Кнопка-Checkbox для закріплення вікна (В самому низу) ---
+        # --- Повзунок прозорості вікна ---
+        opacity_label = QLabel("Прозорість")
+        opacity_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        opacity_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tools_layout.addWidget(opacity_label)
+
+        self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.opacity_slider.setRange(20, 100) 
+        self.opacity_slider.setValue(100)     
+        self.opacity_slider.setFixedWidth(50) 
+        self.opacity_slider.setToolTip("Регулювання прозорості вікна")
+        self.opacity_slider.valueChanged.connect(self.change_opacity)
+        self.tools_layout.addWidget(self.opacity_slider)
+
+        # --- Кнопка-Checkbox для закріплення вікна ---
         self.pin_checkbox = QPushButton("📌")
         self.pin_checkbox.setFixedSize(20, 20)
         self.pin_checkbox.setCheckable(True)
